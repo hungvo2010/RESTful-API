@@ -45,7 +45,7 @@ exports.createPost = (req, res, next) => {
     error.statusCode = 422;
     throw error;
   }
-  const imageUrl = req.file.path;
+  const imageUrl = req.file.path.replace('\\', '/');
   const title = req.body.title;
   const content = req.body.content;
   let creator;

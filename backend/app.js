@@ -1,7 +1,9 @@
 const path = require('path');
+require('dotenv').config({path: path.join(__dirname, '.env')});
 
 const express = require('express');
 const bodyParser = require('body-parser');
+const logger = require('morgan');
 const mongoose = require('mongoose');
 const multer = require('multer');
 
@@ -15,7 +17,7 @@ const fileStorage = multer.diskStorage({
     cb(null, 'images');
   },
   filename: (req, file, cb) => {
-    cb(null, new Date().toISOString() + '-' + file.originalname);
+    cb(null, Date.now() + '-' + file.originalname);
   }
 });
 
@@ -31,6 +33,7 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+app.use(logger('dev'));
 // app.use(bodyParser.urlencoded()); // x-www-form-urlencoded <form>
 app.use(bodyParser.json()); // application/json
 app.use(
@@ -61,7 +64,7 @@ app.use((error, req, res, next) => {
 
 mongoose
   .connect(
-    'mongodb+srv://maximilian:9u4biljMQc4jjqbe@cluster0-ntrwp.mongodb.net/messages?retryWrites=true'
+    process.env.MONGODB_URI
   )
   .then(result => {
     app.listen(8080);
