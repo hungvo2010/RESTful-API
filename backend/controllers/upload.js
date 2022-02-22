@@ -1,7 +1,4 @@
-const clearImage = filePath => {
-    filePath = path.join(__dirname, '..', filePath);
-    fs.unlink(filePath, err => console.log(err));
-};
+const clearImage = require('../utils/file');
 
 module.exports = (req, res, next) => {
     if (!req.isAuth){
