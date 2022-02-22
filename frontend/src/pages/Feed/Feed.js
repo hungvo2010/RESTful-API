@@ -22,19 +22,30 @@ class Feed extends Component {
   };
 
   componentDidMount() {
-    fetch('http://localhost:8080/auth/status', {
+    const graphqlQuery = {
+      query: `
+        {
+          fetchStatus
+        }
+      `
+    }
+    fetch('http://localhost:8080/graphql', {
       headers: {
-        Authorization: 'Bearer ' + this.props.token
-      }
+        Authorization: 'Bearer ' + this.props.token,
+        'Content-Type': 'application/json'
+      },
+      method: 'POST',
+      body: JSON.stringify(graphqlQuery)
     })
       .then(res => {
-        if (res.status !== 200) {
-          throw new Error('Failed to fetch user status.');
-        }
         return res.json();
       })
       .then(resData => {
-        this.setState({ status: resData.status });
+        console.log(resData);
+        if (resData.errors) {
+          throw new Error('Failed to fetch user status.');
+        }
+        this.setState({ status: resData.data.fetchStatus });
       })
       .catch(this.catchError);
 
@@ -88,10 +99,13 @@ class Feed extends Component {
         if (resData.errors){
           throw new Error('Some errors occured.');
         }
+        console.log(resData);
         this.setState({
           posts: resData.data.getPosts.posts.map(post => {
+            console.log(post.createdAt);
             return {
               ...post,
+              createdAt: new Date(parseInt(post.createdAt)).toISOString(),
               imagePath: post.imageUrl
             };
           }),
@@ -104,23 +118,28 @@ class Feed extends Component {
 
   statusUpdateHandler = event => {
     event.preventDefault();
-    fetch('http://localhost:8080/auth/status', {
-      method: 'PATCH',
+    const graphqlQuery = {
+      query: `
+        mutation {
+          updateStatus(newStatus: "${this.state.status}")
+        }
+      `
+    }
+    fetch('http://localhost:8080/graphql', {
+      method: 'POST',
       headers: {
         Authorization: 'Bearer ' + this.props.token,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        status: this.state.status
-      })
+      body: JSON.stringify(graphqlQuery)
     })
       .then(res => {
-        if (res.status !== 200 && res.status !== 201) {
-          throw new Error("Can't update status!");
-        }
         return res.json();
       })
       .then(resData => {
+        if (resData.errors) {
+          throw new Error("Can't update status!");
+        }
         console.log(resData);
       })
       .catch(this.catchError);
@@ -151,6 +170,7 @@ class Feed extends Component {
     });
     const myFormData = new FormData();
     myFormData.append('image', postData.image);
+    console.log(this.state.editPost);
     if (this.state.editPost) {
       myFormData.append('oldPath', this.state.editPost.imagePath);
     }
@@ -162,12 +182,12 @@ class Feed extends Component {
       body: myFormData
     })
     .then(res => {
+      if (res.status !== 200 && res.status !== 201){
+        throw new Error('Creating post failed.');
+      }
       return res.json();
     })
     .then(res => {
-      if (res.status === 200 || res.status === 201){
-        throw new Error('Creating post failed.');
-      }
       let graphqlQuery = {
         query: `
           mutation {
@@ -175,6 +195,7 @@ class Feed extends Component {
               _id,
               title,
               content,
+              imageUrl,
               creator {
                 name
               }
@@ -183,7 +204,7 @@ class Feed extends Component {
           }
         `
       }
-      if (this.state.isEditing){
+      if (this.state.editPost){
         graphqlQuery = {
           query: `
             mutation {
@@ -191,6 +212,7 @@ class Feed extends Component {
                 _id,
                 title,
                 content,
+                imageUrl,
                 creator {
                   name
                 }
@@ -220,7 +242,7 @@ class Feed extends Component {
       if (resData.errors){
         throw new Error("Creating or editing a post failed!");
       }
-      const lookupField = this.state.isEditing ? 'updatePost' : 'createPost';
+      const lookupField = this.state.editPost ? 'updatePost' : 'createPost';
       const post = {
         _id: resData.data[lookupField]._id,
         title: resData.data[lookupField].title,

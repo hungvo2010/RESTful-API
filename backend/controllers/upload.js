@@ -7,7 +7,7 @@ module.exports = (req, res, next) => {
         throw err;
     }
     if (!req.file){
-        return res.status(200).json({message: "No file attached."});
+        return res.status(200).json({message: "No file attached.", filePath: req.body.oldPath});
     }
     if (req.body.oldPath){
         clearImage(req.body.oldPath);

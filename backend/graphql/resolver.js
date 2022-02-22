@@ -107,8 +107,8 @@ module.exports = {
             // , _id: createdPost._id.toString()
             return {
                 ...createdPost._doc,
-                createdAt: createdPost.createdAt.toString(),
-                updatedAt: createdPost.updatedAt.toString()
+                createdAt: createdPost.createdAt.toISOString(),
+                updatedAt: createdPost.updatedAt.toISOString()
             };
         }
         catch (err){
@@ -127,19 +127,13 @@ module.exports = {
         const ITEM_PER_PAGE = 2;
         const totalPosts = await Post.find().countDocuments();
         const posts = await Post.find()
-        .sort({createdAt: -1})
-        .skip((page - 1)*ITEM_PER_PAGE)
-        .limit(ITEM_PER_PAGE)
-        .populate('creator');
-        posts.map(post => {
-            return {
-                ...post._doc, createdAt: post.createdAt.toISOString(),
-                updatedAt: post.updatedAt.toISOString()
-            }
-        })
+            .sort({createdAt: -1})
+            .skip((page - 1)*ITEM_PER_PAGE)
+            .limit(ITEM_PER_PAGE)
+            .populate('creator');
         return {
-            posts,
-            totalPosts
+            posts: posts,
+            totalPosts: totalPosts
         }
     },
 
@@ -201,8 +195,8 @@ module.exports = {
         post.content = content;
         const updatedPost = await post.save();
         return {
-            ...updatedPost._doc, createdAt: post.createdAt.toISOString(),
-            updatedAt: post.updatedAt.toISOString()
+            ...updatedPost._doc, createdAt: updatedPost.createdAt.toISOString(),
+            updatedAt: updatedPost.updatedAt.toISOString()
         }
     },
 
@@ -221,8 +215,43 @@ module.exports = {
         }
         clearImage(post.imageUrl);
         await Post.findByIdAndRemove(postId);
+        const user = await User.findById(req.userId.toString());
+        const index = user.posts.indexOf(postId);
+        user.posts.splice(index, 1);
+        await user.save();
+        return true;
+    },
+
+    async fetchStatus(args, req){
+        // authenticator
+        if (!req.isAuth){
+            const error = new Error('Not authenticated');
+            error.code = 401;
+            throw error;
+        }
         const user = await User.findById(req.userId);
-        user.posts.pull(postId);
+        if (!user){
+            const error = new Error('Not found.');
+            error.code = 401;
+            throw error;
+        }
+        return user.status;
+    },
+
+    async updateStatus({newStatus}, req){
+        // authenticator
+        if (!req.isAuth){
+            const error = new Error('Not authenticated');
+            error.code = 401;
+            throw error;
+        }
+        const user = await User.findById(req.userId);
+        if (!user){
+            const error = new Error('Not found.');
+            error.code = 401;
+            throw error;
+        }
+        user.status = newStatus;
         await user.save();
         return true;
     }

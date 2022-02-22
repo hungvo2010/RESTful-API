@@ -45,6 +45,7 @@ module.exports = buildSchema(`
     type RootQuery {
         getPosts(page: Int): PostsData!
         viewPost(postId: ID!): Post!
+        fetchStatus: String!
     }
 
     type RootMutation {
@@ -53,6 +54,7 @@ module.exports = buildSchema(`
         createPost(postInput: PostInputData): Post!
         updatePost(postId: ID!, postInput: PostInputData): Post!
         deletePost(postId: ID!): Boolean
+        updateStatus(newStatus: String!): Boolean
     }
 
     schema {
